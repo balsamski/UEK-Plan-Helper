@@ -1,0 +1,15 @@
+#filter-panel {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+#filterInput:focus {
+    outline: none;
+    border-color: #0056a3 !important;
+    box-shadow: 0 0 5px rgba(0,86,163,0.3);
+}
+
+/* Zapobiega rozjeżdżaniu się tabeli przy filtrowaniu */
+table[border="1"] {
+    border-collapse: collapse;
+    width: 100%;
+}
