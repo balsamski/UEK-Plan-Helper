@@ -1,10 +1,7 @@
 /**
- * UEK Plan Ultimate Helper v2.2
- * Funkcje: Filtrowanie, Lista sal, Wybór zakresu dat, Harmonogram blokowy, Drukowanie.
+ * UEK Plan Ultimate Helper v1.2
+ * Funkcje: Filtrowanie, Lista sal, Wybór dat, Harmonogram blokowy, Wymuszanie okresu=2.
  */
-
-console.log("UEK Ultimate Planner: Aktywny z wyborem dat");
-
 // --- 1. KONFIGURACJA CZASU ---
 const timeSlots = [
     "08:00 - 08:45", "08:45 - 09:30", 
@@ -30,9 +27,6 @@ function isSlotOccupied(slotStr, eventInterval) {
     return midSlot >= sEvent && midSlot < eEvent;
 }
 
-// Pomocnicza do parsowania daty z formatu UEK (YYYY-MM-DD) na obiekt Date
-const parseDateUEK = (dateStr) => new Date(dateStr);
-
 // --- 2. PARSOWANIE TABELI ---
 function parseTableFromHTML(htmlString = null) {
     let doc = document;
@@ -54,7 +48,7 @@ function parseTableFromHTML(htmlString = null) {
     return rows.filter(r => !r.querySelector('.uwagi')).map(row => {
         const cells = row.querySelectorAll('td');
         return {
-            termin: cells[0]?.innerText.trim(), // Format: YYYY-MM-DD
+            termin: cells[0]?.innerText.trim(),
             czas: cells[1]?.innerText.match(/\d{2}:\d{2} - \d{2}:\d{2}/)?.[0],
             przedmiot: cells[idxPrzedmiot]?.innerText.trim(),
             sala: (idxSala !== -1) ? cells[idxSala].innerText.trim() : headerInfo,
@@ -85,7 +79,6 @@ async function generateMultiSchedule() {
     const rooms = dataStore.savedRooms || [];
     if (rooms.length === 0) return alert("Brak zapisanych sal.");
 
-    // Pobierz daty z pól input
     const dateFrom = document.getElementById('dateFrom').value;
     const dateTo = document.getElementById('dateTo').value;
 
@@ -99,14 +92,9 @@ async function generateMultiSchedule() {
         } catch (e) { console.error(e); }
     }
 
-    // Filtrowanie po datach
     let filteredEvents = allEvents;
-    if (dateFrom) {
-        filteredEvents = filteredEvents.filter(e => e.termin >= dateFrom);
-    }
-    if (dateTo) {
-        filteredEvents = filteredEvents.filter(e => e.termin <= dateTo);
-    }
+    if (dateFrom) filteredEvents = filteredEvents.filter(e => e.termin >= dateFrom);
+    if (dateTo) filteredEvents = filteredEvents.filter(e => e.termin <= dateTo);
 
     const sale = [...new Set(filteredEvents.map(d => d.sala))].sort();
     const daty = [...new Set(filteredEvents.map(d => d.termin))].sort();
@@ -215,7 +203,6 @@ async function setupPlugin() {
     `;
     table.parentNode.insertBefore(panel, table);
 
-    // Filtrowanie
     const input = document.getElementById('filterInput');
     input.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
@@ -233,14 +220,23 @@ async function setupPlugin() {
 
     document.getElementById('btnReset').onclick = () => location.reload();
     document.getElementById('btnGenMulti').onclick = generateMultiSchedule;
+    
+    // --- ZAKTUALIZOWANA LOGIKA ZAPISU Z WYMUSZENIEM OKRESU ---
     document.getElementById('btnSaveRoom').onclick = async () => {
         const headerInfo = document.querySelector('.grupa')?.innerText.trim();
-        const url = window.location.href;
-        if (!url.includes('id=')) return;
+        
+        // Pobieramy aktualny URL i modyfikujemy go
+        let currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('okres', '2'); // Wymuszamy okres=2
+        const finalUrl = currentUrl.toString();
+
+        if (!finalUrl.includes('id=')) return;
+
         let d = await chrome.storage.local.get(['savedRooms']);
         let r = d.savedRooms || [];
-        if (!r.find(x => x.url === url)) {
-            r.push({ name: headerInfo, url: url });
+        
+        if (!r.find(x => x.url === finalUrl)) {
+            r.push({ name: headerInfo, url: finalUrl });
             await chrome.storage.local.set({ savedRooms: r });
             renderSavedRoomsList();
         }
