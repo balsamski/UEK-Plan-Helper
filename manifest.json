@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "UEK Plan Sorter",
-  "version": "1.0",
-  "description": "Sortowanie i filtrowanie planu zajęć UEK",
-  "permissions": ["activeTab"],
+  "name": "UEK Plan Helper",
+  "version": "1.1",
+  "description": "Sortowanie i filtrowanie planu zajęć UEK i inne możliwości!",
+  "permissions": ["activeTab", "storage"],
   "content_scripts": [
     {
       "matches": ["https://planzajec.uek.krakow.pl/*"],
