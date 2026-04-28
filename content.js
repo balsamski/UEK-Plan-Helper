@@ -66,16 +66,17 @@ function printDay(dayId, dayDate) {
     const printWindow = window.open('', '_blank', 'height=600,width=900');
     printWindow.document.write(`<html><head><title>Plan UEK - ${dayDate}</title><style>
         body { font-family: sans-serif; padding: 0; margin: 0; }
-        h3 { color: #444; margin: 10px 10px 5px 10px; font-size: 16px; }
+        h3 { color: #0056a3; margin: 10px 10px 5px 10px; font-size: 16px; }
         table { border-collapse: collapse; width: 100%; table-layout: fixed; }
         
-        th, td { padding: 2px !important; text-align: center; vertical-align: middle !important; word-wrap: break-word; height: auto !important; }
-        th { border: 1px solid #bbb; background-color: #f2f2f2 !important; font-size: 11px !important; -webkit-print-color-adjust: exact; }
+        th, td { border: 1px solid #cee4ff; padding: 2px !important; text-align: center; vertical-align: middle !important; word-wrap: break-word; height: auto !important; }
+        /* ZMIANA: Rozmiar fontu w nagłówkach na wydruku wyrównany do czasu (14px) */
+        th { background-color: #f2f2f2 !important; font-size: 14px !important; -webkit-print-color-adjust: exact; }
         
         td div { margin-top: 1px !important; margin-bottom: 1px !important; line-height: 1.1 !important; text-align: center; }
         
         .page-break { page-break-before: always; break-before: page; padding-top: 15px; }
-        .print-only { display: block !important; color: #444; margin: 0 10px 10px 10px; font-size: 16px; font-weight: bold; }
+        .print-only { display: block !important; color: #0056a3; margin: 0 10px 10px 10px; font-size: 16px; font-weight: bold; }
         
         @page { size: landscape; margin: 0.5cm; }
     </style></head><body>
@@ -110,7 +111,17 @@ async function generateMultiSchedule() {
     if (dateFrom) filteredEvents = filteredEvents.filter(e => e.termin >= dateFrom);
     if (dateTo) filteredEvents = filteredEvents.filter(e => e.termin <= dateTo);
 
-    const sale = [...new Set(filteredEvents.map(d => d.sala))].sort();
+    // ZMIANA: Ustalenie kolejności według tablicy 'rooms' (kolejność dodania do ulubionych)
+    const savedOrderedNames = [...new Set(rooms.map(r => cleanRoomName(r.name)))];
+    const sale = [...new Set(filteredEvents.map(d => d.sala))]
+        .sort((a, b) => {
+            let idxA = savedOrderedNames.indexOf(a);
+            let idxB = savedOrderedNames.indexOf(b);
+            if (idxA === -1) idxA = 999;
+            if (idxB === -1) idxB = 999;
+            return idxA - idxB;
+        });
+
     const daty = [...new Set(filteredEvents.map(d => d.termin))].sort();
 
     if (daty.length === 0) {
@@ -122,7 +133,7 @@ async function generateMultiSchedule() {
     const saleChunks = chunkArray(sale, 6);
 
     let html = `<div style="font-family: sans-serif; padding: 20px; background: #fff;">
-                <h2 style="color: #444; border-bottom: 2px solid #444; margin-bottom: 5px;">Zbiorczy Harmonogram</h2>
+                <h2 style="color: #0056a3; border-bottom: 2px solid #0056a3; margin-bottom: 5px;">Zbiorczy Harmonogram</h2>
                 <div style="font-size: 12px; color: #666; margin-bottom: 15px;">Zakres: ${dateFrom || 'Początek'} do ${dateTo || 'Koniec'} (${daty.length} dni)</div>`;
     
     daty.forEach((dataDnia, index) => {
@@ -138,7 +149,7 @@ async function generateMultiSchedule() {
             
             html += `
             <div class="${isPageBreak ? 'page-break' : ''}" style="margin-bottom: 30px;">
-                ${saleChunks.length > 1 ? `<div style="font-weight: bold; margin-bottom: 5px; color: #444;">Część ${chunkIdx + 1} z ${saleChunks.length}</div>` : ''}
+                ${saleChunks.length > 1 ? `<div style="font-weight: bold; margin-bottom: 5px; color: #0056a3;">Część ${chunkIdx + 1} z ${saleChunks.length}</div>` : ''}
                 <div class="print-only" style="display: none;">📅 ${dataDnia} (cz. ${chunkIdx + 1})</div>
                 
                 <div style="overflow-x:auto; border:1px solid #ccc;">
@@ -155,14 +166,7 @@ async function generateMultiSchedule() {
             saleChunk.forEach(s => skipCells[s] = 0);
 
             timeSlots.forEach((slot, slotIdx) => {
-                // ZMIANA: Zwykła linia szara, pogrubiona to biznesowy niebieski (#444)
-                const isThickBottom = (slotIdx % 2 === 1);
-                const isThickTop = (slotIdx % 2 === 0 && slotIdx > 0);
-                
-                const borderBottom = isThickBottom ? '3px solid #444' : '1px solid #ddd';
-                const borderTop = isThickTop ? '3px solid #444' : '1px solid #ddd';
-
-                html += `<tr><td style="font-weight:bold; background:#f9f9f9; border-left:1px solid #ddd; border-right:1px solid #ddd; border-top:${borderTop}; border-bottom:${borderBottom}; font-size:14px; padding:6px 2px; vertical-align: middle;">${slot}</td>`;
+                html += `<tr><td style="font-weight:bold; background:#f9f9f9; border:1px solid #ddd; font-size:14px; padding:6px 2px; vertical-align: middle;">${slot}</td>`;
                 
                 saleChunk.forEach(s => {
                     if (skipCells[s] > 0) {
@@ -189,7 +193,7 @@ async function generateMultiSchedule() {
                         const cellStyle = [
                             `background: #e7f3ff !important`,
                             `color: #333`,
-                            `border: 3px solid #444`,
+                            `border: 2px solid #0056a3`,
                             `padding: 4px`,
                             `vertical-align: middle !important`,
                             `text-align: center`,             
@@ -197,13 +201,12 @@ async function generateMultiSchedule() {
                         ].join(';');
 
                         html += `<td rowspan="${rowspanCount}" style="${cellStyle}">
-                            ${showDetails ? `<div style="font-size: 11px; font-weight: bold; color: #444; margin-bottom: 4px; text-align: center;">⌚ ${event.czas}</div>` : ''}
+                            ${showDetails ? `<div style="font-size: 11px; font-weight: bold; color: #0056a3; margin-bottom: 4px; text-align: center;">⌚ ${event.czas}</div>` : ''}
                             <div style="font-weight: bold; font-size: 15px; color: #b71c1c; margin-top: 2px; text-align: center;">${event.prowadzacy}</div>
                             ${showDetails ? `<div style="font-size: 11px; margin-top: 4px; color: #444; line-height: 1.2; text-align: center;">${event.przedmiot}</div>` : ''}
                         </td>`;
                     } else { 
-                        // ZMIANA: Puste komórki również adaptują nową, niebieską ramkę poziomą
-                        html += `<td style="border-left:1px solid #eee; border-right:1px solid #eee; border-top:${borderTop}; border-bottom:${borderBottom}; background:#fff;"></td>`; 
+                        html += `<td style="border:1px solid #eee; background:#fff;"></td>`; 
                     }
                 });
                 html += `</tr>`;
@@ -241,7 +244,7 @@ async function renderSavedRoomsList() {
     }
     listContainer.innerHTML = rooms.map(room => `
         <div style="display:inline-flex; align-items:center; background:#f0f7ff; border:1px solid #bcdbff; padding:4px 10px; margin:3px; border-radius:15px; font-size:13px;">
-            <span style="margin-right:8px; font-weight:bold; color:#444;">${room.name}</span>
+            <span style="margin-right:8px; font-weight:bold; color:#0056a3;">${room.name}</span>
             <span class="remove-room" data-url="${room.url}" style="cursor:pointer; color:#ff4d4d; font-weight:bold; font-size:18px; line-height: 1;">&times;</span>
         </div>
     `).join('');
@@ -257,11 +260,11 @@ async function setupPlugin() {
 
     const panel = document.createElement('div');
     panel.id = 'uek-helper-panel';
-    panel.style = "background:#fff; padding:15px; border:2px solid #444; margin-bottom:15px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1); font-family:sans-serif;";
+    panel.style = "background:#fff; padding:15px; border:2px solid #0056a3; margin-bottom:15px; border-radius:8px; box-shadow:0 4px 10px rgba(0,0,0,0.1); font-family:sans-serif;";
     panel.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:10px;">
             <div>
-                <strong style="color:#444; display:block; margin-bottom:8px; font-size: 18px;">🚀 UEK Multi-Planner</strong>
+                <strong style="color:#0056a3; display:block; margin-bottom:8px; font-size: 18px;">🚀 UEK Multi-Planner</strong>
                 <div id="saved-rooms-list" style="max-width:600px; margin-bottom:12px;"></div>
                 
                 <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
